@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_model.dart';
 import '../widgets/game_card.dart';
+import 'game_details_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,33 +11,152 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Estado inicial: Aba 'Jogos' (Todos)
   GameStatus _selectedStatus = GameStatus.jogos;
 
-  // Lista Mockada (Falsa) para teste visual
+  // Lista Inicial
   final List<Game> _allGames = [
-    Game(id: '1', title: 'God of War', status: GameStatus.jogando),
-    Game(id: '2', title: 'Hollow Knight', status: GameStatus.finalizado),
+    Game(id: '1', title: 'God of War', status: GameStatus.jogando, isFavorite: true),
+    Game(id: '2', title: 'Hollow Knight', status: GameStatus.finalizado, isFavorite: true),
     Game(id: '3', title: 'Cyberpunk 2077', status: GameStatus.abandonado),
     Game(id: '4', title: 'Elden Ring', status: GameStatus.jogando),
-    Game(id: '5', title: 'Celeste', status: GameStatus.finalizado),
   ];
 
-  // Método para definir as cores baseadas no status
-  Color _getThemeColor(GameStatus status) {
-    switch (status) {
-      case GameStatus.jogos:
-        return Colors.blue[800]!; // Azul Escuro padrão
-      case GameStatus.jogando:
-        return const Color(0xFFD4AC0D); // Amarelo escuro/Dourado
-      case GameStatus.finalizado:
-        return Colors.green[700]!; // Verde
-      case GameStatus.abandonado:
-        return Colors.red[700]!; // Vermelho
-    }
+  final Color _headerPurple = const Color(0xFFD1C4E9);
+  final Color _accentPurple = const Color(0xFF7C4DFF);
+  final Color _bgWhite = const Color(0xFFE8EAF6);
+
+  // --- Navegação ---
+  void _openGameDetails(Game game) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameDetailsPage(
+          game: game,
+          onUpdate: (updatedGame) {
+            setState(() {
+              int index = _allGames.indexWhere((g) => g.id == updatedGame.id);
+              if (index != -1) _allGames[index] = updatedGame;
+            });
+          },
+          onDelete: (gameId) {
+            setState(() {
+              _allGames.removeWhere((g) => g.id == gameId);
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Jogo excluído.'), backgroundColor: Colors.red),
+            );
+          },
+        ),
+      ),
+    );
   }
 
-  // Método para obter título da aba formatado
+  // --- NOVO: Modal para Adicionar Jogo ---
+  void _showAddGameModal() {
+    final titleController = TextEditingController();
+    // Opções disponíveis no Dropdown
+    final List<String> categories = ['Jogando', 'Favoritos', 'Finalizado', 'Abandonado'];
+    String selectedCategory = 'Jogando'; // Valor padrão
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          // StatefulBuilder é necessário para atualizar o Dropdown dentro do Dialog
+          builder: (context, setModalState) {
+            return AlertDialog(
+              title: const Text("Adicionar Novo Jogo"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Input de Título
+                  TextField(
+                    controller: titleController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: "Nome do Jogo",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Dropdown de Categoria
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: "Status / Categoria",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: categories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setModalState(() => selectedCategory = newValue);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (titleController.text.isEmpty) return;
+
+                    // Lógica para definir status e favorito baseado na escolha
+                    bool isFav = false;
+                    GameStatus status = GameStatus.jogando;
+
+                    switch (selectedCategory) {
+                      case 'Favoritos':
+                        isFav = true;
+                        status = GameStatus.jogando; // Favorito geralmente é algo que se joga ou gosta muito
+                        break;
+                      case 'Jogando':
+                        status = GameStatus.jogando;
+                        break;
+                      case 'Finalizado':
+                        status = GameStatus.finalizado;
+                        break;
+                      case 'Abandonado':
+                        status = GameStatus.abandonado;
+                        break;
+                    }
+
+                    // Cria e adiciona o jogo
+                    setState(() {
+                      _allGames.add(Game(
+                        id: DateTime.now().toString(),
+                        title: titleController.text,
+                        status: status,
+                        isFavorite: isFav,
+                      ));
+                    });
+
+                    Navigator.pop(ctx); // Fecha o modal
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Jogo "${titleController.text}" adicionado!')),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: _accentPurple),
+                  child: const Text("Salvar", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _getTabTitle(GameStatus status) {
     switch (status) {
       case GameStatus.jogos: return "Jogos";
@@ -46,155 +166,189 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Column(
+      children: [
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: _accentPurple,
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        Divider(color: _accentPurple.withOpacity(0.4), thickness: 1),
+      ],
+    );
+  }
+
+  Widget _buildGroupedListView() {
+    final favorites = _allGames.where((g) => g.isFavorite).toList();
+    final jogando = _allGames.where((g) => g.status == GameStatus.jogando && !g.isFavorite).toList();
+    final finalizados = _allGames.where((g) => g.status == GameStatus.finalizado && !g.isFavorite).toList();
+    final abandonados = _allGames.where((g) => g.status == GameStatus.abandonado && !g.isFavorite).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (favorites.isNotEmpty) ...[
+          _buildSectionHeader("Favoritos"),
+          ...favorites.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
+        ],
+
+        _buildSectionHeader("Jogando"),
+        if (jogando.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text("Nenhum jogo nesta lista.")),
+        ...jogando.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
+
+        _buildSectionHeader("Finalizado"),
+        if (finalizados.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text("Nenhum jogo nesta lista.")),
+        ...finalizados.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
+        
+        if (abandonados.isNotEmpty) ...[
+           _buildSectionHeader("Abandonado"),
+           ...abandonados.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildFilteredListView(List<Game> games) {
+    if (games.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 50),
+        child: Center(child: Text("Nenhum jogo nesta categoria.", style: TextStyle(color: Colors.grey[600]))),
+      );
+    }
+    return Column(
+       children: games.map((game) => GameCard(
+          game: game, 
+          onTap: () => _openGameDetails(game),
+       )).toList()
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Cor atual baseada na aba selecionada
-    final currentColor = _getThemeColor(_selectedStatus);
-
-    // Filtrar a lista
-    List<Game> displayedGames;
-    if (_selectedStatus == GameStatus.jogos) {
-      displayedGames = _allGames;
-    } else {
+    List<Game> displayedGames = [];
+    if (_selectedStatus != GameStatus.jogos) {
       displayedGames = _allGames.where((g) => g.status == _selectedStatus).toList();
     }
 
     return Scaffold(
-      // Fundo muda levemente de cor dependendo da aba (bem suave)
-      backgroundColor: currentColor.withOpacity(0.05),
-      
-      body: SafeArea(
+      backgroundColor: Colors.grey[200],
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- Cabeçalho ---
-            Padding(
-              padding: const EdgeInsets.all(20.0),
+            // Header
+            Container(
+              height: 140,
+              padding: const EdgeInsets.only(top: 40, left: 20, right: 20),
+              decoration: BoxDecoration(color: _headerPurple),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Game Note",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A237E), // Azul bem escuro
+                  const Expanded(
+                    child: Text(
+                      "Game Note",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-                  Icon(Icons.settings, color: Colors.grey[800]),
+                  Icon(Icons.settings_outlined, color: Colors.black87, size: 30),
                 ],
               ),
             ),
 
-            // --- Título da Seção ---
+            // Título
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Meus Jogos",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
+              padding: EdgeInsets.only(top: 15.0, bottom: 5.0),
+              child: Text(
+                "Meus Jogos",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w400),
+              ),
+            ),
+
+            // Botão Adicionar Jogo (Agora chama o Modal)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 15.0),
+              child: ElevatedButton.icon(
+                onPressed: _showAddGameModal, // <--- ALTERADO AQUI
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text(
+                  "Adicionar Novo Jogo",
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _accentPurple,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  elevation: 4,
                 ),
               ),
             ),
 
-            // --- Abas (Customizadas) ---
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: Row(
-                children: GameStatus.values.map((status) {
-                  bool isSelected = _selectedStatus == status;
-                  Color tabColor = _getThemeColor(status);
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedStatus = status;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 5),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? tabColor : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: isSelected
-                            ? [BoxShadow(color: tabColor.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 4))]
-                            : [],
-                      ),
-                      child: Text(
-                        _getTabTitle(status),
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // --- Linha Divisória Colorida ---
+            // Painel Branco
             Container(
-              height: 2,
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              color: currentColor.withOpacity(0.5),
-            ),
-
-            const SizedBox(height: 10),
-
-            // --- Botão de Adicionar (Apenas visual na aba específica) ---
-            if (_selectedStatus != GameStatus.jogos)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 5),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height * 0.7),
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: _bgWhite,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   Text(
-                    _getTabTitle(_selectedStatus), // Ex: "Jogando"
-                    style: TextStyle(
-                      color: currentColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold
+                  // Abas
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: GameStatus.values.map((status) {
+                        bool isSelected = _selectedStatus == status;
+                        return GestureDetector(
+                          onTap: () { setState(() { _selectedStatus = status; }); },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isSelected ? const Color(0xFF9575CD) : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _getTabTitle(status),
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black54,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () {
-                      // Ação futura: Abrir Modal
-                    },
-                    icon: Icon(Icons.add_circle_outline, color: currentColor),
-                    label: Text("Adic. Jogo", style: TextStyle(color: currentColor)),
-                  )
+
+                  const SizedBox(height: 10),
+
+                  // Conteúdo
+                  _selectedStatus == GameStatus.jogos
+                      ? _buildGroupedListView()
+                      : _buildFilteredListView(displayedGames),
+                  
+                  const SizedBox(height: 50),
                 ],
               ),
-            ),
-
-            // --- Lista de Jogos ---
-            Expanded(
-              child: displayedGames.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.videogame_asset_off, size: 60, color: Colors.grey[400]),
-                          const SizedBox(height: 10),
-                          Text("Nenhum jogo encontrado nesta lista.", style: TextStyle(color: Colors.grey[600])),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: displayedGames.length,
-                      itemBuilder: (context, index) {
-                        return GameCard(
-                          game: displayedGames[index],
-                          themeColor: _getThemeColor(displayedGames[index].status),
-                        );
-                      },
-                    ),
             ),
           ],
         ),

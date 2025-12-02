@@ -1,84 +1,133 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../models/game_model.dart';
 
 class GameCard extends StatelessWidget {
   final Game game;
-  final Color themeColor;
+  final VoidCallback onTap;
 
-  const GameCard({super.key, required this.game, required this.themeColor});
+  const GameCard({
+    super.key, 
+    required this.game,
+    required this.onTap,
+  });
+
+  String _getStatusString(GameStatus status) {
+    switch (status) {
+      case GameStatus.jogos: return "";
+      case GameStatus.jogando: return "Jogando";
+      case GameStatus.finalizado: return "Finalizado";
+      case GameStatus.abandonado: return "Abandonado";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[200], // Fundo cinza quase branco do card
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Placeholder da Imagem (Quadrado com ícone)
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: themeColor.withOpacity(0.3), // Cor do tema suave
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: themeColor, width: 1),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD9D9D9),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ],
+        ),
+        child: Row(
+          children: [
+            // --- MINIATURA DA IMAGEM ---
+            Container(
+              width: 90,
+              height: 90,
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9FA8DA),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF7986CB), width: 2),
+                image: game.imagePath != null && game.imagePath!.isNotEmpty
+                    ? DecorationImage(
+                        image: FileImage(File(game.imagePath!)), 
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: game.imagePath == null || game.imagePath!.isEmpty
+                 ? const Icon(Icons.image_outlined, color: Colors.black87, size: 40)
+                 : null,
             ),
-            child: Icon(Icons.image, color: themeColor, size: 30),
-          ),
-          const SizedBox(width: 16),
-          // Informações do Texto
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  game.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C3E50), // Azul escuro
-                  ),
+            
+            // --- TEXTOS E AVALIAÇÃO ---
+            Expanded(
+              child: Container(
+                height: 90,
+                margin: const EdgeInsets.only(right: 12, top: 12, bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                   color: const Color(0xFFB3C0E6),
+                   borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Row(
+                child: Stack(
                   children: [
-                    Text(
-                      "Status: ",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    // Textos (Título e Status)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          game.title,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Status:   ${_getStatusString(game.status)}",
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
                     ),
-                    Text(
-                      game.status.name.toUpperCase(),
-                      style: TextStyle(
-                        color: themeColor, // Cor dinâmica
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                    
+                    // --- NOVA AVALIAÇÃO (Canto Inferior Direito) ---
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.5), // Fundo leve para destaque
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              game.rating.toString(), // Exibe o número (ex: 10)
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.star, 
+                              size: 16, 
+                              color: Colors.amber, // Estrela Dourada
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
-          // Botão de Informação (i)
-          IconButton(
-            onPressed: () {
-              // Ação futura: Abrir detalhes
-            },
-            icon: const Icon(Icons.info_outline),
-            color: const Color(0xFF2C3E50),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }
