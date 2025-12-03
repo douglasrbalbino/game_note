@@ -52,6 +52,17 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
     widget.onUpdate(widget.game);
   }
 
+  // Helper para decidir qual tipo de imagem carregar (Internet ou Local)
+  ImageProvider? _getImageProvider() {
+    if (_currentImagePath == null || _currentImagePath!.isEmpty) return null;
+    
+    if (_currentImagePath!.startsWith('http')) {
+      return NetworkImage(_currentImagePath!); // Imagem da API
+    } else {
+      return FileImage(File(_currentImagePath!)); // Imagem Local
+    }
+  }
+
   Future<String?> _pickImage({required bool fromCamera}) async {
     try {
       final XFile? photo = await _picker.pickImage(
@@ -250,20 +261,17 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // --- HEADER COM BOTÃO VOLTAR ---
+              // --- HEADER ---
               Container(
                 height: 120,
                 padding: const EdgeInsets.only(top: 40, left: 10, right: 20),
                 decoration: BoxDecoration(color: _headerPurple),
                 child: Row(
                   children: [
-                    // Botão Voltar (Esquerda)
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 28),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    
-                    // Título Centralizado (Usamos Expanded para empurrar o icone da direita)
                     const Expanded(
                       child: Center(
                         child: Text(
@@ -272,8 +280,6 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                         ),
                       ),
                     ),
-                    
-                    // Ícone Settings (Direita) - Mantém o equilíbrio visual
                     Icon(Icons.settings_outlined, color: Colors.black87),
                   ],
                 ),
@@ -288,6 +294,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                 ),
                 child: Column(
                   children: [
+                    // Título e Ícone Edit
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -312,10 +319,26 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 10),
+                    // --- EXIBIÇÃO DO GÊNERO (Novo) ---
+                    if (widget.game.genre != null && widget.game.genre!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          widget.game.genre!,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
 
+                    const SizedBox(height: 5),
+
+                    // --- IMAGEM GRANDE (Atualizado para suportar API e Local) ---
                     GestureDetector(
                       onTap: () async {
+                        // Ao clicar, permite trocar por uma imagem LOCAL (Galeria)
                         String? path = await _pickImage(fromCamera: false);
                         if (path != null) {
                           setState(() => _currentImagePath = path);
@@ -329,14 +352,15 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                           color: const Color(0xFF9FA8DA),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.black12),
-                          image: _currentImagePath != null
+                          // Usa o helper _getImageProvider()
+                          image: _getImageProvider() != null
                               ? DecorationImage(
-                                  image: FileImage(File(_currentImagePath!)),
-                                  fit: BoxFit.cover, // Capa do jogo pode ser cover
+                                  image: _getImageProvider()!,
+                                  fit: BoxFit.cover, // Para a capa, Cover fica melhor
                                 )
                               : null,
                         ),
-                        child: _currentImagePath == null
+                        child: _getImageProvider() == null
                             ? const Icon(Icons.image_outlined, size: 80, color: Colors.black54)
                             : null,
                       ),
@@ -514,19 +538,18 @@ class _RegisterCardState extends State<_RegisterCard> {
               Text(widget.log.description, style: const TextStyle(fontSize: 14)),
               
               if (hasImage)
-                // --- AJUSTE DE IMAGEM AQUI ---
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       constraints: const BoxConstraints(
-                        maxHeight: 400, // Limite máximo de altura para não explodir a tela
+                        maxHeight: 400,
                       ),
                       width: double.infinity,
                       child: Image.file(
                         File(widget.log.imagePath!),
-                        fit: BoxFit.contain, // Garante que a imagem apareça inteira
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
