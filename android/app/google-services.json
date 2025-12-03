@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "147425406980",
+    "project_id": "game-note-16cf9",
+    "storage_bucket": "game-note-16cf9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147425406980:android:1ee16bfe0702705ada0551",
+        "android_client_info": {
+          "package_name": "com.example.game_note_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHLvqNQ8RWZzKEIqXXaCLha8q4gXqUn2s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
