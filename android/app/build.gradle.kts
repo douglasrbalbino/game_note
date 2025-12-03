@@ -1,8 +1,7 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android") // ou algo similar que já esteja aí
+    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // Adicione esta linha com aspas duplas e parênteses:
     id("com.google.gms.google-services")
 }
 
@@ -20,19 +19,25 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-defaultConfig {
-    // ...
-    applicationId "com.exemplo.game_note" // Verifique se está igual ao do Firebase
-    minSdkVersion 23 // <--- MUDE PARA 21 OU 23 (O padrão costuma vir baixo)
-    targetSdkVersion flutter.targetSdkVersion
-    versionCode flutterVersionCode.toInteger()
-    versionName flutterVersionName
-}
+    defaultConfig {
+        // --- AQUI ESTAVA O ERRO ---
+        // Em Kotlin (.kts), usamos sinal de IGUAL (=)
+        
+        // 1. O ID deve ser IGUAL ao que está no seu google-services.json
+        applicationId = "com.example.game_note_application" 
+        
+        // 2. Usamos 'minSdk' em vez de 'minSdkVersion'
+        minSdk = flutter.minSdkVersion 
+        
+        // 3. As variáveis do Flutter também mudam ligeiramente
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Assina com a chave de debug para facilitar testes
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -43,11 +48,9 @@ flutter {
 }
 
 dependencies {
-  // Import the Firebase BoM
-  implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
-
-
-  // TODO: Add the dependencies for Firebase products you want to use
-  // When using the BoM, don't specify versions in Firebase dependencies
-  // https://firebase.google.com/docs/android/setup#available-libraries
+    // Importa a plataforma do Firebase (BoM)
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    
+    // Adicione outras dependências do Firebase aqui se precisar, ex:
+    // implementation("com.google.firebase:firebase-analytics")
 }
