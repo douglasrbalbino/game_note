@@ -17,22 +17,45 @@ class _SignupPageState extends State<SignupPage> {
   final Color _headerPurple = const Color(0xFFD1C4E9);
   final Color _accentPurple = const Color(0xFF7C4DFF);
 
-void _doSignUp() async {
-    try {
-      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
+  void _doSignUp() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Preencha todos os campos obrigatórios.")),
+      );
+      return;
+    }
 
+    try {
+      // Cria a conta e realiza o login automático no Firebase
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       
-      // Se der certo, volta e avisa
+      // Opcional: Aqui você poderia salvar o "Nome" e "Telefone" no Firestore 
+      // na coleção 'users' -> doc(uid), se quisesse persistir esses dados extras.
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Conta criada com sucesso!")));
-        Navigator.pop(context);
+        // Sucesso! Fechamos a tela de cadastro.
+        // O StreamBuilder no main.dart vai detectar o login e mostrar a HomePage.
+        Navigator.pop(context); 
       }
+
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: ${e.message}")));
+      String message = "Erro ao cadastrar.";
+      if (e.code == 'weak-password') {
+        message = "A senha é muito fraca.";
+      } else if (e.code == 'email-already-in-use') {
+        message = "Este e-mail já está em uso.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red),
+      );
     }
   }
 

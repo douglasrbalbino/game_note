@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_page.dart';
 import 'forgot_password_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,25 +14,37 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
-  // Cores do Tema
   final Color _headerPurple = const Color(0xFFD1C4E9);
   final Color _accentPurple = const Color(0xFF7C4DFF);
 
   void _doLogin() async {
+    // Mostra o loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
+
+      // SUCESSO: Apenas fechamos o loading.
+      // O main.dart vai perceber o login e mudar para a Home automaticamente.
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+        Navigator.pop(context); 
+      }
+
+    } on FirebaseAuthException catch (e) {
+      // ERRO: Fecha o loading e avisa
+      if (mounted) {
+        Navigator.pop(context); 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro: ${e.message}"), backgroundColor: Colors.red),
         );
       }
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro: ${e.message}")));
     }
   }
 
@@ -44,7 +55,6 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Cabeçalho Curvo Gigante
             Container(
               height: 300,
               width: double.infinity,
@@ -79,13 +89,13 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 40),
 
-            // Formulário
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 children: [
                   TextField(
                     controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: "E-mail",
                       prefixIcon: const Icon(Icons.email_outlined),
@@ -107,7 +117,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   
-                  // Esqueci minha senha
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -120,7 +129,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  // Botão Entrar
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -136,7 +144,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 30),
 
-                  // Cadastre-se
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

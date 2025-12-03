@@ -19,20 +19,17 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    defaultConfig {
-        // --- AQUI ESTAVA O ERRO ---
-        // Em Kotlin (.kts), usamos sinal de IGUAL (=)
-        
-        // 1. O ID deve ser IGUAL ao que está no seu google-services.json
+defaultConfig {
+        // CORREÇÃO: O ID deve ser igual ao do google-services.json
         applicationId = "com.example.game_note_application" 
         
-        // 2. Usamos 'minSdk' em vez de 'minSdkVersion'
-        minSdk = flutter.minSdkVersion 
-        
-        // 3. As variáveis do Flutter também mudam ligeiramente
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // ADICIONE ISSO: Ajuda a prevenir erros de "app fechando" em projetos com Firebase
+        multiDexEnabled = true 
     }
 
     buildTypes {

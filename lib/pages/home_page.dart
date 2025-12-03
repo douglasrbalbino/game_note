@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Necessário para o Logout
 import '../models/game_model.dart';
 import '../widgets/game_card.dart';
 import 'game_details_page.dart';
@@ -18,18 +18,18 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   GameStatus _selectedStatus = GameStatus.jogos;
   
-  // Serviços
   final RawgService _apiService = RawgService();
   final FirestoreService _firestoreService = FirestoreService();
 
-  // Cores do Tema
   final Color _headerPurple = const Color(0xFFD1C4E9);
   final Color _accentPurple = const Color(0xFF7C4DFF);
   final Color _bgWhite = const Color(0xFFE8EAF6);
 
-  // --- Logout ---
+  // --- LOGOUT FUNCIONAL ---
   void _logout() async {
     await FirebaseAuth.instance.signOut();
+    // Se o seu main.dart tiver o StreamBuilder, ele troca de tela sozinho.
+    // Se não tiver, garantimos a navegação aqui:
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
@@ -39,18 +39,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- Navegação para Detalhes ---
+  // ... (Métodos de Navegação e Modal continuam iguais) ...
   void _openGameDetails(Game game) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => GameDetailsPage(
           game: game,
-          // Callback de Atualização: Chama o Firestore
           onUpdate: (updatedGame) async {
             await _firestoreService.updateGame(updatedGame);
           },
-          // Callback de Exclusão: Chama o Firestore
           onDelete: (gameId) async {
             await _firestoreService.deleteGame(gameId);
             if (mounted) {
@@ -64,19 +62,14 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- Modal de Adicionar Jogo (API + Firestore) ---
   void _showAddGameModal() {
     final titleController = TextEditingController();
-    
-    // Variáveis de Estado do Modal
     List<Map<String, dynamic>> searchResults = [];
     bool isLoading = false;
     String selectedGenre = "Gênero Desconhecido";
     String? selectedImage;
-    
     final List<String> categories = ['Jogando', 'Favoritos', 'Finalizado', 'Abandonado'];
     String selectedCategory = 'Jogando';
-
     Timer? searchDebounce;
 
     showDialog(
@@ -84,30 +77,18 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            
-            // Função de Busca na API RAWG
             void runSearch(String query) async {
               if (query.isEmpty) {
-                setModalState(() {
-                  searchResults = [];
-                  isLoading = false;
-                });
+                setModalState(() { searchResults = []; isLoading = false; });
                 return;
               }
-
               setModalState(() => isLoading = true);
-              
               final results = await _apiService.searchGames(query);
-              
               if (context.mounted) {
-                setModalState(() {
-                  searchResults = results;
-                  isLoading = false;
-                });
+                setModalState(() { searchResults = results; isLoading = false; });
               }
             }
 
-            // Debounce: Espera usuário parar de digitar
             void onSearchChanged(String query) {
               if (searchDebounce?.isActive ?? false) searchDebounce!.cancel();
               searchDebounce = Timer(const Duration(milliseconds: 500), () {
@@ -122,7 +103,6 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Input com Busca Automática
                     TextField(
                       controller: titleController,
                       decoration: const InputDecoration(
@@ -133,24 +113,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                       onChanged: onSearchChanged,
                     ),
-                    
-                    // Barra de Progresso
-                    if (isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
-                        child: LinearProgressIndicator(),
-                      ),
-
-                    // Lista de Sugestões da API
+                    if (isLoading) const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: LinearProgressIndicator()),
                     if (searchResults.isNotEmpty && !isLoading)
                        Container(
                          margin: const EdgeInsets.only(top: 5),
                          height: 150,
-                         decoration: BoxDecoration(
-                           border: Border.all(color: Colors.grey.shade300),
-                           borderRadius: BorderRadius.circular(8),
-                           color: Colors.white,
-                         ),
+                         decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8), color: Colors.white),
                          child: ListView.separated(
                            shrinkWrap: true,
                            itemCount: searchResults.length,
@@ -159,97 +127,45 @@ class _HomePageState extends State<HomePage> {
                              final game = searchResults[index];
                              return ListTile(
                                dense: true,
-                               leading: game['image'] != null 
-                                 ? ClipRRect(
-                                     borderRadius: BorderRadius.circular(4),
-                                     child: Image.network(game['image'], width: 40, height: 40, fit: BoxFit.cover),
-                                   )
-                                 : const Icon(Icons.gamepad),
+                               leading: game['image'] != null ? ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(game['image'], width: 40, height: 40, fit: BoxFit.cover)) : const Icon(Icons.gamepad),
                                title: Text(game['title']),
                                subtitle: Text(game['genre'], style: const TextStyle(fontSize: 10)),
                                onTap: () {
-                                 // Preenche os dados ao clicar na sugestão
                                  titleController.text = game['title'];
-                                 // Move cursor pro final
                                  titleController.selection = TextSelection.fromPosition(TextPosition(offset: titleController.text.length));
-                                 
-                                 setModalState(() {
-                                    selectedGenre = game['genre'];
-                                    selectedImage = game['image'];
-                                    searchResults = []; // Fecha a lista
-                                 });
+                                 setModalState(() { selectedGenre = game['genre']; selectedImage = game['image']; searchResults = []; });
                                },
                              );
                            },
                          ),
                        ),
-
                     const SizedBox(height: 20),
-                    
-                    // Seletor de Categoria
                     DropdownButtonFormField<String>(
                       value: selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: "Status / Categoria", 
-                        border: OutlineInputBorder()
-                      ),
+                      decoration: const InputDecoration(labelText: "Status / Categoria", border: OutlineInputBorder()),
                       items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                       onChanged: (v) => setModalState(() => selectedCategory = v!),
                     ),
-                    
-                    // Chip de Gênero (se detectado)
                     if (selectedGenre != "Gênero Desconhecido")
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Chip(
-                            label: Text(selectedGenre),
-                            backgroundColor: Colors.blue[100],
-                            avatar: const Icon(Icons.category, size: 16),
-                          ),
-                        ),
-                      )
+                      Padding(padding: const EdgeInsets.only(top: 10), child: Align(alignment: Alignment.centerLeft, child: Chip(label: Text(selectedGenre), backgroundColor: Colors.blue[100], avatar: const Icon(Icons.category, size: 16)))),
                   ],
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
-                ),
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar", style: TextStyle(color: Colors.grey))),
                 ElevatedButton(
                   onPressed: () async {
                     if (titleController.text.isEmpty) return;
-
                     bool isFav = selectedCategory == 'Favoritos';
                     GameStatus status = GameStatus.jogando;
-
                     if (!isFav) {
-                       status = GameStatus.values.firstWhere(
-                        (e) => e.toString().split('.').last == selectedCategory.toLowerCase(),
-                        orElse: () => GameStatus.jogando
-                      );
+                       status = GameStatus.values.firstWhere((e) => e.toString().split('.').last == selectedCategory.toLowerCase(), orElse: () => GameStatus.jogando);
                     }
-
-                    // Cria o objeto Game
-                    final newGame = Game(
-                      id: '', // Firestore vai gerar o ID
-                      title: titleController.text,
-                      status: status,
-                      isFavorite: isFav,
-                      genre: selectedGenre == "Gênero Desconhecido" ? null : selectedGenre,  
-                      imagePath: selectedImage,
-                    );
-
-                    // Salva no Firebase
+                    final newGame = Game(id: '', title: titleController.text, status: status, isFavorite: isFav, genre: selectedGenre == "Gênero Desconhecido" ? null : selectedGenre, imagePath: selectedImage);
                     await _firestoreService.addGame(newGame);
-
                     if (mounted) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${titleController.text} salvo com sucesso!')),
-                      );
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${titleController.text} salvo com sucesso!')));
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: _accentPurple),
@@ -263,7 +179,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- Helpers de UI ---
+  // ... (Helpers de UI mantidos) ...
   String _getTabTitle(GameStatus status) {
     switch (status) {
       case GameStatus.jogos: return "Jogos";
@@ -280,14 +196,7 @@ class _HomePageState extends State<HomePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: _accentPurple,
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(title, style: TextStyle(color: _accentPurple, fontSize: 20, fontWeight: FontWeight.w500)),
           ],
         ),
         Divider(color: _accentPurple.withOpacity(0.4), thickness: 1),
@@ -295,7 +204,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Lista Agrupada (Recebe dados do Firebase)
   Widget _buildGroupedListView(List<Game> games) {
     final favorites = games.where((g) => g.isFavorite).toList();
     final jogando = games.where((g) => g.status == GameStatus.jogando && !g.isFavorite).toList();
@@ -305,51 +213,61 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (favorites.isNotEmpty) ...[
-          _buildSectionHeader("Favoritos"),
-          ...favorites.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
-        ],
-
+        if (favorites.isNotEmpty) ...[ _buildSectionHeader("Favoritos"), ...favorites.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))) ],
         _buildSectionHeader("Jogando"),
         if (jogando.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text("Nenhum jogo nesta lista.")),
         ...jogando.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
-
         _buildSectionHeader("Finalizado"),
         if (finalizados.isEmpty) const Padding(padding: EdgeInsets.all(8.0), child: Text("Nenhum jogo nesta lista.")),
         ...finalizados.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
-        
-        if (abandonados.isNotEmpty) ...[
-           _buildSectionHeader("Abandonado"),
-           ...abandonados.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))),
-        ]
+        if (abandonados.isNotEmpty) ...[ _buildSectionHeader("Abandonado"), ...abandonados.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))) ]
       ],
     );
   }
 
-  // Lista Filtrada (Recebe dados do Firebase)
   Widget _buildFilteredListView(List<Game> games) {
     if (games.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 50),
-        child: Center(child: Text("Nenhum jogo nesta categoria.", style: TextStyle(color: Colors.grey[600]))),
-      );
+      return Padding(padding: const EdgeInsets.only(top: 50), child: Center(child: Text("Nenhum jogo nesta categoria.", style: TextStyle(color: Colors.grey[600]))));
     }
-    return Column(
-       children: games.map((game) => GameCard(
-          game: game, 
-          onTap: () => _openGameDetails(game),
-       )).toList()
-    );
+    return Column(children: games.map((game) => GameCard(game: game, onTap: () => _openGameDetails(game))).toList());
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    // STREAM BUILDER: Escuta o Firebase em tempo real
     return StreamBuilder<List<Game>>(
       stream: _firestoreService.getGames(),
       builder: (context, snapshot) {
         
-        // Estado de Carregamento
+        // 1. Tratamento de Erro (Novo)
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: Colors.grey[200],
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                  const SizedBox(height: 10),
+                  const Text("Erro ao carregar dados", style: TextStyle(fontSize: 18)),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "${snapshot.error}", 
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => setState(() {}), 
+                    child: const Text("Tentar Novamente")
+                  )
+                ],
+              ),
+            ),
+          );
+        }
+
+        // 2. Estado de Carregamento
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             backgroundColor: Colors.grey[200],
@@ -372,7 +290,7 @@ class _HomePageState extends State<HomePage> {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // 1. Banner Superior (Roxo) com Logout
+                // --- CABEÇALHO COM LOGOUT ---
                 Container(
                   height: 140,
                   padding: const EdgeInsets.only(top: 40, left: 20, right: 20),
@@ -393,55 +311,45 @@ class _HomePageState extends State<HomePage> {
                       IconButton(
                         icon: const Icon(Icons.logout, color: Colors.black87),
                         onPressed: _logout,
+                        tooltip: "Sair",
                       ),
                     ],
                   ),
                 ),
 
-                // 2. Título "Meus Jogos"
                 const Padding(
-                  padding: EdgeInsets.only(top: 15.0, bottom: 5.0),
-                  child: Text(
-                    "Meus Jogos",
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w400),
-                  ),
+                  padding: EdgeInsets.only(top: 15.0, bottom: 5.0), 
+                  child: Text("Meus Jogos", style: TextStyle(fontSize: 26, fontWeight: FontWeight.w400))
                 ),
-
-                // 3. Botão Adicionar Jogo (Abre Modal)
+                
                 Padding(
                   padding: const EdgeInsets.only(bottom: 15.0),
                   child: ElevatedButton.icon(
                     onPressed: _showAddGameModal,
                     icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text(
-                      "Adicionar Novo Jogo",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
+                    label: const Text("Adicionar Novo Jogo", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _accentPurple,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      elevation: 4,
+                      backgroundColor: _accentPurple, 
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), 
+                      elevation: 4
                     ),
                   ),
                 ),
 
-                // 4. Painel Branco Principal
+                // Lista de Jogos
                 Container(
                   constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height * 0.7),
                   margin: const EdgeInsets.symmetric(horizontal: 10),
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: _bgWhite,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
+                    color: _bgWhite, 
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30))
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Abas (Chips)
+                      // Abas
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -453,27 +361,23 @@ class _HomePageState extends State<HomePage> {
                                 margin: const EdgeInsets.only(right: 10),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFF9575CD) : Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(20),
+                                  color: isSelected ? const Color(0xFF9575CD) : Colors.grey[300], 
+                                  borderRadius: BorderRadius.circular(20)
                                 ),
                                 child: Text(
-                                  _getTabTitle(status),
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : Colors.black54,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  _getTabTitle(status), 
+                                  style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.w500)
                                 ),
                               ),
                             );
                           }).toList(),
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
-                      // Conteúdo da Lista (Baseado no Stream)
-                      _selectedStatus == GameStatus.jogos
-                          ? _buildGroupedListView(allGames)
+                      
+                      // Exibição condicional da lista
+                      _selectedStatus == GameStatus.jogos 
+                          ? _buildGroupedListView(allGames) 
                           : _buildFilteredListView(displayedGames),
                       
                       const SizedBox(height: 50),
