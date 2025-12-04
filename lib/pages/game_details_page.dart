@@ -181,6 +181,11 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                     });
                     _saveChanges();
                     Navigator.pop(ctx);
+                    
+                    // --- 1. NOTIFICAÇÃO AO SALVAR ---
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Registro salvo com sucesso!')),
+                    );
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD500F9)),
                   child: const Text("Registrar", style: TextStyle(color: Colors.white)),
@@ -319,7 +324,7 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                       ],
                     ),
 
-                    // --- EXIBIÇÃO DO GÊNERO (Novo) ---
+                    // --- EXIBIÇÃO DO GÊNERO ---
                     if (widget.game.genre != null && widget.game.genre!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -335,10 +340,9 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
 
                     const SizedBox(height: 5),
 
-                    // --- IMAGEM GRANDE (Atualizado para suportar API e Local) ---
+                    // --- IMAGEM GRANDE ---
                     GestureDetector(
                       onTap: () async {
-                        // Ao clicar, permite trocar por uma imagem LOCAL (Galeria)
                         String? path = await _pickImage(fromCamera: false);
                         if (path != null) {
                           setState(() => _currentImagePath = path);
@@ -352,11 +356,10 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                           color: const Color(0xFF9FA8DA),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.black12),
-                          // Usa o helper _getImageProvider()
                           image: _getImageProvider() != null
                               ? DecorationImage(
                                   image: _getImageProvider()!,
-                                  fit: BoxFit.cover, // Para a capa, Cover fica melhor
+                                  fit: BoxFit.cover,
                                 )
                               : null,
                         ),
@@ -424,6 +427,10 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                     Divider(color: _accentPurple.withOpacity(0.5)),
                     const SizedBox(height: 10),
 
+                    // --- 2. TÍTULO DA CATEGORIA ---
+                    const Text("Categoria:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 5),
+
                     Row(
                       children: [
                         _buildStatusButton("Favorito", Colors.yellow, _isFavorite, () {
@@ -446,9 +453,11 @@ class _GameDetailsPageState extends State<GameDetailsPage> {
                     ),
 
                     const SizedBox(height: 20),
+                    
+                    // --- 3. BOTÃO EXCLUIR JOGO ---
                     ElevatedButton.icon(
                       icon: const Icon(Icons.delete, color: Colors.white, size: 18),
-                      label: const Text("Excluir", style: TextStyle(color: Colors.white)),
+                      label: const Text("Excluir Jogo", style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_page.dart'; // Importante para navegar para a Home
+// Não precisa mais importar home_page.dart aqui
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -12,10 +12,9 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _phoneController = TextEditingController(); 
   final _passwordController = TextEditingController();
   
-  // Controle de Loading
   bool _isLoading = false;
   
   final Color _headerPurple = const Color(0xFFD1C4E9);
@@ -29,24 +28,25 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
-    // Ativa loading e esconde teclado
-    setState(() => _isLoading = true);
+    // Esconde teclado e ativa loading
     FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
 
     try {
-      // 1. Cria a conta no Firebase (isso já faz o login automático)
+      // 1. Cria a conta (o Firebase faz login automático aqui)
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       
-      // 2. Navega DIRETO para a Home e remove todas as telas anteriores (Login/Cadastro)
+      // 2. CORREÇÃO CRÍTICA AQUI:
+      // Ao invés de empurrar uma nova tela (que quebra o StreamBuilder),
+      // nós apenas fechamos a tela de cadastro.
+      // Como o usuário acabou de logar, o StreamBuilder do main.dart (que está por baixo desta tela)
+      // já trocou a tela de fundo de "Login" para "Home".
+      // Então, ao fechar o cadastro, o usuário cairá direto na Home funcional.
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false, // Remove tudo da pilha
-        );
+        Navigator.pop(context); 
       }
 
     } on FirebaseAuthException catch (e) {
@@ -100,7 +100,7 @@ class _SignupPageState extends State<SignupPage> {
             
             const SizedBox(height: 40),
 
-            // Nome
+            // Campos...
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
@@ -112,7 +112,6 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 15),
 
-            // E-mail
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
@@ -125,7 +124,6 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 15),
 
-            // Celular (Opcional)
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
@@ -139,7 +137,6 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 15),
 
-            // Senha
             TextField(
               controller: _passwordController,
               obscureText: true,
@@ -157,7 +154,7 @@ class _SignupPageState extends State<SignupPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _doSignUp, // Bloqueia clique duplo
+                onPressed: _isLoading ? null : _doSignUp,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _accentPurple,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
