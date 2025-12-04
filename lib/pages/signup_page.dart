@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'home_page.dart'; // Importante para navegar para a Home
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -11,8 +12,11 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController(); // Opcional
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  
+  // Controle de Loading
+  bool _isLoading = false;
   
   final Color _headerPurple = const Color(0xFFD1C4E9);
   final Color _accentPurple = const Color(0xFF7C4DFF);
@@ -25,37 +29,48 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    // Ativa loading e esconde teclado
+    setState(() => _isLoading = true);
+    FocusScope.of(context).unfocus();
+
     try {
-      // Cria a conta e realiza o login automático no Firebase
+      // 1. Cria a conta no Firebase (isso já faz o login automático)
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
       
-      // Opcional: Aqui você poderia salvar o "Nome" e "Telefone" no Firestore 
-      // na coleção 'users' -> doc(uid), se quisesse persistir esses dados extras.
-
+      // 2. Navega DIRETO para a Home e remove todas as telas anteriores (Login/Cadastro)
       if (mounted) {
-        // Sucesso! Fechamos a tela de cadastro.
-        // O StreamBuilder no main.dart vai detectar o login e mostrar a HomePage.
-        Navigator.pop(context); 
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false, // Remove tudo da pilha
+        );
       }
 
     } on FirebaseAuthException catch (e) {
-      String message = "Erro ao cadastrar.";
-      if (e.code == 'weak-password') {
-        message = "A senha é muito fraca.";
-      } else if (e.code == 'email-already-in-use') {
-        message = "Este e-mail já está em uso.";
-      }
+      if (mounted) {
+        setState(() => _isLoading = false);
+        
+        String message = "Erro ao cadastrar.";
+        if (e.code == 'weak-password') {
+          message = "A senha é muito fraca.";
+        } else if (e.code == 'email-already-in-use') {
+          message = "Este e-mail já está em uso.";
+        }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro: $e"), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -142,12 +157,17 @@ class _SignupPageState extends State<SignupPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _doSignUp,
+                onPressed: _isLoading ? null : _doSignUp, // Bloqueia clique duplo
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _accentPurple,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text("CADASTRAR", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                child: _isLoading 
+                  ? const SizedBox(
+                      height: 20, width: 20, 
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    )
+                  : const Text("CADASTRAR", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

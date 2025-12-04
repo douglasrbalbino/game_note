@@ -32,9 +32,9 @@ dependencies:
     sdk: flutter
   image_picker: ^1.0.4
   http: ^1.2.0
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
-  cloud_firestore: ^4.14.0
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
   path_provider: ^2.1.1 # Para salvar a imagem localmente
   path: ^1.8.3 # Auxiliar para manipular nomes de arquivos
 
