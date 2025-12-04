@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // Mantenha isso
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 
@@ -23,21 +24,30 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF5F6FA),
         useMaterial3: true,
       ),
-      // O StreamBuilder vigia o login. Se mudar, ele troca a tela sozinho.
+      
+      // --- MANTENHA ISSO (É o "motor" que entende os acentos) ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      
+      // --- LISTA DE IDIOMAS QUE SEU APP ENTENDE ---
+      supportedLocales: const [
+        Locale('en', 'US'), // Inglês
+        Locale('pt', 'BR'), // Português
+      ],
+      // REMOVI A LINHA "locale: ..." -> Agora ele detecta sozinho!
+      
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Enquanto verifica se está logado
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-
-          // Se tem usuário -> Home
           if (snapshot.hasData) {
             return const HomePage();
           }
-
-          // Se não tem -> Login
           return const LoginPage();
         },
       ),

@@ -15,11 +15,14 @@ class RawgService {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        // --- CORREÇÃO DE ACENTUAÇÃO AQUI ---
+        // Usamos utf8.decode(response.bodyBytes) em vez de response.body
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        // -----------------------------------
+        
         final List results = data['results'];
 
         return results.map((game) {
-          // Extrair o primeiro gênero da lista, se houver
           String genre = 'Desconhecido';
           if (game['genres'] != null && (game['genres'] as List).isNotEmpty) {
             genre = game['genres'][0]['name'];
@@ -27,9 +30,9 @@ class RawgService {
 
           return {
             'title': game['name'],
-            'image': game['background_image'], // URL da imagem
+            'image': game['background_image'],
             'genre': genre,
-            'rating': game['rating'] // Opcional: nota do jogo na RAWG
+            'rating': game['rating']
           };
         }).toList();
       } else {
